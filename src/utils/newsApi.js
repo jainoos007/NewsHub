@@ -1,7 +1,33 @@
 import axios from "axios";
 
-// Use different base URL for development vs production
-const BASE_URL = import.meta.env.DEV ? "http://localhost:5173/api" : "/api";
+const API_KEY = import.meta.env.VITE_GNEWS_API_KEY;
+const BASE_URL = "https://gnews.io/api/v4";
+
+// Map categories to GNews topics
+const categoryMap = {
+  general: "breaking-news",
+  technology: "technology",
+  business: "business",
+  sports: "sports",
+  entertainment: "entertainment",
+  health: "health",
+  science: "science",
+};
+
+// Transform GNews article to News API format
+const transformArticle = (article) => ({
+  source: {
+    id: null,
+    name: article.source?.name || "Unknown",
+  },
+  author: article.source?.name || null,
+  title: article.title,
+  description: article.description,
+  url: article.url,
+  urlToImage: article.image, // GNews uses 'image' instead of 'urlToImage'
+  publishedAt: article.publishedAt,
+  content: article.content,
+});
 
 export const newsApi = {
   // Get top headlines
@@ -13,22 +39,30 @@ export const newsApi = {
   ) => {
     try {
       const params = {
-        page,
+        token: API_KEY,
+        lang: "en",
+        max: 12,
       };
 
-      if (sources.length > 0) {
-        params.sources = sources.join(",");
-      } else {
-        params.category = category;
+      if (category) {
+        params.topic = categoryMap[category] || "breaking-news";
+      }
+
+      if (country) {
         params.country = country;
       }
 
-      const response = await axios.get(`${BASE_URL}/news`, { params });
+      const response = await axios.get(`${BASE_URL}/top-headlines`, { params });
+
+      // Transform articles to match News API format
+      const transformedArticles = (response.data.articles || []).map(
+        transformArticle
+      );
 
       return {
-        articles: response.data.articles || [],
-        totalResults: response.data.totalResults || 0,
-        hasMore: (response.data.articles || []).length === 12,
+        articles: transformedArticles,
+        totalResults: response.data.totalArticles || 0,
+        hasMore: transformedArticles.length === 12,
       };
     } catch (error) {
       console.error("Error fetching news:", error);
@@ -39,17 +73,24 @@ export const newsApi = {
   // Search news
   searchNews: async (query, page = 1) => {
     try {
-      const response = await axios.get(`${BASE_URL}/search`, {
-        params: {
-          q: query,
-          page,
-        },
-      });
+      const params = {
+        q: query,
+        token: API_KEY,
+        lang: "en",
+        max: 12,
+      };
+
+      const response = await axios.get(`${BASE_URL}/search`, { params });
+
+      // Transform articles to match News API format
+      const transformedArticles = (response.data.articles || []).map(
+        transformArticle
+      );
 
       return {
-        articles: response.data.articles || [],
-        totalResults: response.data.totalResults || 0,
-        hasMore: (response.data.articles || []).length === 12,
+        articles: transformedArticles,
+        totalResults: response.data.totalArticles || 0,
+        hasMore: transformedArticles.length === 12,
       };
     } catch (error) {
       console.error("Error searching news:", error);

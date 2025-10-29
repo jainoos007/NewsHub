@@ -15,7 +15,6 @@ function App() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("general");
-  const [selectedSources, setSelectedSources] = useState([]);
   const [darkMode, setDarkMode] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,9 +38,9 @@ function App() {
     setArticles([]);
     setHasMore(true);
     if (!searchQuery) {
-      fetchNews(activeCategory, selectedSources, 1);
+      fetchNews(activeCategory, 1);
     }
-  }, [activeCategory, selectedSources]);
+  }, [activeCategory]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -61,18 +60,10 @@ function App() {
     }
 
     return () => observer.disconnect();
-  }, [
-    hasMore,
-    loading,
-    loadingMore,
-    page,
-    activeCategory,
-    selectedSources,
-    searchQuery,
-  ]);
+  }, [hasMore, loading, loadingMore, page, activeCategory, searchQuery]);
 
   // Fetch news (removed country parameter)
-  const fetchNews = async (category, sources, pageNum) => {
+  const fetchNews = async (category, pageNum) => {
     if (pageNum === 1) {
       setLoading(true);
     } else {
@@ -81,12 +72,7 @@ function App() {
     setError(null);
 
     try {
-      const data = await newsApi.getTopHeadlines(
-        category,
-        "us",
-        pageNum,
-        sources
-      );
+      const data = await newsApi.getTopHeadlines(category, "us", pageNum);
 
       if (pageNum === 1) {
         setArticles(data.articles);
@@ -114,7 +100,7 @@ function App() {
     if (searchQuery) {
       searchNews(searchQuery, nextPage);
     } else {
-      fetchNews(activeCategory, selectedSources, nextPage);
+      fetchNews(activeCategory, nextPage);
     }
   };
 
@@ -153,7 +139,7 @@ function App() {
       setSearchQuery("");
       setPage(1);
       setArticles([]);
-      fetchNews(activeCategory, selectedSources, 1);
+      fetchNews(activeCategory, 1);
       return;
     }
 
@@ -182,19 +168,13 @@ function App() {
     setSelectedSources([]);
   };
 
-  // Handle source change
-  const handleSourceChange = (sources) => {
-    setSelectedSources(sources);
-    setSearchQuery("");
-  };
-
   // Handle retry
   const handleRetry = () => {
     setPage(1);
     if (searchQuery) {
       handleSearch(searchQuery);
     } else {
-      fetchNews(activeCategory, selectedSources, 1);
+      fetchNews(activeCategory, 1);
     }
   };
 
@@ -227,17 +207,11 @@ function App() {
                   onCategoryChange={handleCategoryChange}
                 />
               </div>
-
-              {/* Source Filter */}
-              <SourceFilter
-                selectedSources={selectedSources}
-                onSourceChange={handleSourceChange}
-              />
             </div>
           </div>
 
           {/* Search/Filter Info */}
-          {(searchQuery || selectedSources.length > 0) && (
+          {searchQuery && (
             <div className="mb-6 flex flex-wrap items-center gap-2">
               {searchQuery && (
                 <p className="text-gray-600 dark:text-gray-400">
@@ -247,12 +221,7 @@ function App() {
                   </span>
                 </p>
               )}
-              {selectedSources.length > 0 && (
-                <p className="text-gray-600 dark:text-gray-400">
-                  Filtered by {selectedSources.length} source
-                  {selectedSources.length > 1 ? "s" : ""}
-                </p>
-              )}
+
               <span className="text-gray-500 dark:text-gray-400">
                 ({articles.length} articles)
               </span>
