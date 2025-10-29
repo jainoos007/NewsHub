@@ -1,10 +1,10 @@
 import axios from "axios";
 
-const API_KEY = import.meta.env.VITE_NEWS_API_KEY;
-const BASE_URL = "https://newsapi.org/v2";
+// Use different base URL for development vs production
+const BASE_URL = import.meta.env.DEV ? "http://localhost:5173/api" : "/api";
 
 export const newsApi = {
-  // Get top headlines with pagination
+  // Get top headlines
   getTopHeadlines: async (
     category = "general",
     country = "us",
@@ -13,12 +13,9 @@ export const newsApi = {
   ) => {
     try {
       const params = {
-        apiKey: API_KEY,
         page,
-        pageSize: 12, // Load 12 articles per page
       };
 
-      // Either use sources OR category+country (not both)
       if (sources.length > 0) {
         params.sources = sources.join(",");
       } else {
@@ -26,11 +23,12 @@ export const newsApi = {
         params.country = country;
       }
 
-      const response = await axios.get(`${BASE_URL}/top-headlines`, { params });
+      const response = await axios.get(`${BASE_URL}/news`, { params });
+
       return {
-        articles: response.data.articles,
-        totalResults: response.data.totalResults,
-        hasMore: response.data.articles.length === 12,
+        articles: response.data.articles || [],
+        totalResults: response.data.totalResults || 0,
+        hasMore: (response.data.articles || []).length === 12,
       };
     } catch (error) {
       console.error("Error fetching news:", error);
@@ -38,22 +36,20 @@ export const newsApi = {
     }
   },
 
-  // Search news with pagination
+  // Search news
   searchNews: async (query, page = 1) => {
     try {
-      const response = await axios.get(`${BASE_URL}/everything`, {
+      const response = await axios.get(`${BASE_URL}/search`, {
         params: {
           q: query,
-          sortBy: "publishedAt",
           page,
-          pageSize: 12,
-          apiKey: API_KEY,
         },
       });
+
       return {
-        articles: response.data.articles,
-        totalResults: response.data.totalResults,
-        hasMore: response.data.articles.length === 12,
+        articles: response.data.articles || [],
+        totalResults: response.data.totalResults || 0,
+        hasMore: (response.data.articles || []).length === 12,
       };
     } catch (error) {
       console.error("Error searching news:", error);
